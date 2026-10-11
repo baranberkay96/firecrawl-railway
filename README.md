@@ -32,7 +32,7 @@ Self-hosted Firecrawl is more than one API container. Scrape and crawl requests 
 
 | Service | Role | Public | Storage |
 |---|---|---|---|
-| firecrawl | Caddy gateway, checks `Authorization: Bearer <key>` | Yes (port 8080) | – |
+| firecrawl | Caddy gateway, checks `Authorization: Bearer {key}` | Yes (port 8080) | – |
 | firecrawl-api | Firecrawl HTTP API | No | – |
 | firecrawl-worker | Crawl orchestration, extract, NuQ prefetch and reconciler | No | – |
 | firecrawl-nuq-worker | Scrape executors (5 processes by default) | No | – |
@@ -44,9 +44,9 @@ Self-hosted Firecrawl is more than one API container. Scrape and crawl requests 
 **First request**
 
 1. Copy `FIRECRAWL_API_KEY` from the `firecrawl` (gateway) service variables.
-2. Use the gateway's public URL as the API URL in an SDK (for example `FirecrawlApp(api_key=..., api_url="https://<gateway-domain>")`) or call it directly:
-   `curl -X POST https://<gateway-domain>/v2/scrape -H "Authorization: Bearer <key>" -H "Content-Type: application/json" -d '{"url":"https://example.com","formats":["markdown"]}'`
-3. The BullMQ queue dashboard is at `https://<gateway-domain>/admin/<BULL_AUTH_KEY>/queues` (`BULL_AUTH_KEY` is on `firecrawl-api`).
+2. Use the gateway's public URL as the API URL in an SDK (for example `FirecrawlApp(api_key=..., api_url="https://{gateway-domain}")`) or call it directly:
+   `curl -X POST https://{gateway-domain}/v2/scrape -H "Authorization: Bearer {key}" -H "Content-Type: application/json" -d '{"url":"https://example.com","formats":["markdown"]}'`
+3. The BullMQ queue dashboard is at `https://{gateway-domain}/admin/{BULL_AUTH_KEY}/queues` (`BULL_AUTH_KEY` is on `firecrawl-api`).
 4. To enable JSON extraction and `/extract`, set `OPENAI_API_KEY` (and optionally `OPENAI_BASE_URL`, `MODEL_NAME`) on `firecrawl-api`; the workers reference those values.
 
 **Scaling:** raise `NUQ_WORKER_COUNT` on `firecrawl-nuq-worker` or add replicas to it for more parallel scrapes, and add replicas to `playwright-service` for heavier JavaScript rendering. Keep `firecrawl-worker` at one replica.
