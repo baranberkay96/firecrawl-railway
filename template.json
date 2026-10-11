@@ -1,0 +1,729 @@
+{
+  "name": "Firecrawl v2 Web Data API for AI",
+  "description": "Turn websites into clean markdown and JSON for LLMs. Self-hosted, with workers.",
+  "category": "AI/ML",
+  "tags": [
+    "firecrawl",
+    "web-scraping",
+    "crawler",
+    "markdown",
+    "llm",
+    "rag",
+    "playwright"
+  ],
+  "upstream": {
+    "repo": "firecrawl/firecrawl",
+    "version": "v2.11.0 (image 2.11.504)",
+    "checked": "2026-10-10"
+  },
+  "services": {
+    "firecrawl": {
+      "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/caddy.svg",
+      "source": {
+        "repo": "baranberkay96/firecrawl-railway",
+        "rootDirectory": "/services/gateway"
+      },
+      "startCommand": null,
+      "preDeployCommand": null,
+      "healthcheckPath": "/healthz",
+      "healthcheckTimeout": 60,
+      "restartPolicyType": "ON_FAILURE",
+      "restartPolicyMaxRetries": 10,
+      "numReplicas": 1,
+      "cronSchedule": null,
+      "publicDomain": true,
+      "targetPort": 8080,
+      "tcpProxy": null,
+      "volume": null,
+      "variables": {
+        "PORT": {
+          "defaultValue": "8080",
+          "description": "Gateway listen port (public domain target).",
+          "required": false
+        },
+        "FIRECRAWL_API_KEY": {
+          "defaultValue": "fc-${{secret(32, \"abcdef0123456789\")}}",
+          "description": "API key clients must send as 'Authorization: Bearer <key>'. Use it as the SDK api_key.",
+          "required": false
+        },
+        "FIRECRAWL_UPSTREAM": {
+          "defaultValue": "${{firecrawl-api.RAILWAY_PRIVATE_DOMAIN}}:3002",
+          "description": "Private address of firecrawl-api.",
+          "required": false
+        }
+      }
+    },
+    "firecrawl-api": {
+      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/svg/firecrawl.svg",
+      "source": {
+        "image": "ghcr.io/firecrawl/firecrawl:2.11.504"
+      },
+      "startCommand": "node dist/src/index.js",
+      "preDeployCommand": null,
+      "healthcheckPath": "/v0/health/readiness",
+      "healthcheckTimeout": 300,
+      "restartPolicyType": "ON_FAILURE",
+      "restartPolicyMaxRetries": 10,
+      "numReplicas": 1,
+      "cronSchedule": null,
+      "publicDomain": false,
+      "targetPort": 3002,
+      "tcpProxy": null,
+      "volume": null,
+      "variables": {
+        "HOST": {
+          "defaultValue": "::",
+          "description": "Bind address; :: accepts IPv4 and IPv6 from the gateway.",
+          "required": false
+        },
+        "PORT": {
+          "defaultValue": "3002",
+          "description": "API port (private).",
+          "required": false
+        },
+        "ENV": {
+          "defaultValue": "local",
+          "description": "Self-hosted mode (same value as the upstream docker-compose).",
+          "required": false
+        },
+        "LOGGING_LEVEL": {
+          "defaultValue": "INFO",
+          "description": "Log level.",
+          "required": false
+        },
+        "USE_DB_AUTHENTICATION": {
+          "defaultValue": "false",
+          "description": "Supabase auth is not available for self-hosting; the firecrawl gateway enforces the API key instead.",
+          "required": false
+        },
+        "REDIS_URL": {
+          "defaultValue": "${{Redis.REDIS_URL}}",
+          "description": "Redis for BullMQ queues and crawl state.",
+          "required": false
+        },
+        "REDIS_RATE_LIMIT_URL": {
+          "defaultValue": "${{Redis.REDIS_URL}}",
+          "description": "Redis for rate limiting.",
+          "required": false
+        },
+        "NUQ_DATABASE_URL": {
+          "defaultValue": "postgresql://postgres:${{nuq-postgres.POSTGRES_PASSWORD}}@${{nuq-postgres.RAILWAY_PRIVATE_DOMAIN}}:5432/postgres",
+          "description": "NuQ job queue database (nuq-postgres, private network).",
+          "required": false
+        },
+        "NUQ_DATABASE_URL_LISTEN": {
+          "defaultValue": "${{NUQ_DATABASE_URL}}",
+          "description": "Direct connection used for LISTEN/NOTIFY (same database).",
+          "required": false
+        },
+        "NUQ_RABBITMQ_URL": {
+          "defaultValue": "amqp://firecrawl:${{RabbitMQ.RABBITMQ_DEFAULT_PASS}}@${{RabbitMQ.RAILWAY_PRIVATE_DOMAIN}}:5672",
+          "description": "RabbitMQ used by NuQ to wake workers when jobs arrive.",
+          "required": false
+        },
+        "PLAYWRIGHT_MICROSERVICE_URL": {
+          "defaultValue": "http://${{playwright-service.RAILWAY_PRIVATE_DOMAIN}}:3000/scrape",
+          "description": "Browser rendering service (private network).",
+          "required": false
+        },
+        "BULL_AUTH_KEY": {
+          "defaultValue": "${{secret(32, \"abcdef0123456789\")}}",
+          "description": "Secret path segment for the queue dashboard: /admin/<BULL_AUTH_KEY>/queues.",
+          "required": false
+        },
+        "NUM_WORKERS_PER_QUEUE": {
+          "defaultValue": "8",
+          "description": "BullMQ concurrency per queue (upstream default).",
+          "required": false
+        },
+        "CRAWL_CONCURRENT_REQUESTS": {
+          "defaultValue": "10",
+          "description": "Concurrent requests per crawl (upstream default).",
+          "required": false
+        },
+        "MAX_CONCURRENT_JOBS": {
+          "defaultValue": "5",
+          "description": "Max concurrent jobs per team (upstream default).",
+          "required": false
+        },
+        "BROWSER_POOL_SIZE": {
+          "defaultValue": "5",
+          "description": "Browser pool size (upstream default).",
+          "required": false
+        },
+        "OPENAI_API_KEY": {
+          "defaultValue": "",
+          "description": "Optional. Enables LLM features (JSON/extract formats, /extract). Leave empty to disable.",
+          "required": false
+        },
+        "OPENAI_BASE_URL": {
+          "defaultValue": "",
+          "description": "Optional. OpenAI-compatible base URL (e.g. a LiteLLM gateway).",
+          "required": false
+        },
+        "MODEL_NAME": {
+          "defaultValue": "",
+          "description": "Optional. Model used for extraction (e.g. gpt-4o-mini).",
+          "required": false
+        },
+        "MODEL_EMBEDDING_NAME": {
+          "defaultValue": "",
+          "description": "Optional. Embedding model name.",
+          "required": false
+        },
+        "OLLAMA_BASE_URL": {
+          "defaultValue": "",
+          "description": "Optional (experimental upstream). Ollama API base URL instead of OpenAI.",
+          "required": false
+        },
+        "PROXY_SERVER": {
+          "defaultValue": "",
+          "description": "Optional. Outbound HTTP proxy for fetches (http://host:port).",
+          "required": false
+        },
+        "PROXY_USERNAME": {
+          "defaultValue": "",
+          "description": "Optional. Proxy username.",
+          "required": false
+        },
+        "PROXY_PASSWORD": {
+          "defaultValue": "",
+          "description": "Optional. Proxy password.",
+          "required": false
+        },
+        "SEARXNG_ENDPOINT": {
+          "defaultValue": "",
+          "description": "Optional. SearXNG instance (JSON enabled) for /search instead of direct Google.",
+          "required": false
+        },
+        "RAILWAY_DEPLOYMENT_DRAINING_SECONDS": {
+          "defaultValue": "60",
+          "description": "Let in-flight scrape requests finish during redeploys.",
+          "required": false
+        }
+      }
+    },
+    "firecrawl-worker": {
+      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/svg/firecrawl.svg",
+      "source": {
+        "repo": "baranberkay96/firecrawl-railway",
+        "rootDirectory": "/services/firecrawl-workers"
+      },
+      "startCommand": null,
+      "preDeployCommand": null,
+      "healthcheckPath": "/liveness",
+      "healthcheckTimeout": 300,
+      "restartPolicyType": "ON_FAILURE",
+      "restartPolicyMaxRetries": 10,
+      "numReplicas": 1,
+      "cronSchedule": null,
+      "publicDomain": false,
+      "targetPort": 3005,
+      "tcpProxy": null,
+      "volume": null,
+      "variables": {
+        "FIRECRAWL_WORKER_ROLE": {
+          "defaultValue": "worker",
+          "description": "Process group run by services/firecrawl-workers/railway-workers.sh: queue-worker, extract-worker, NuQ prefetch and reconciler.",
+          "required": false
+        },
+        "PORT": {
+          "defaultValue": "3005",
+          "description": "Liveness port of the queue-worker (Railway healthcheck).",
+          "required": false
+        },
+        "WORKER_PORT": {
+          "defaultValue": "3005",
+          "description": "queue-worker liveness port.",
+          "required": false
+        },
+        "EXTRACT_WORKER_PORT": {
+          "defaultValue": "3004",
+          "description": "extract-worker health port.",
+          "required": false
+        },
+        "NUQ_PREFETCH_WORKER_PORT": {
+          "defaultValue": "3011",
+          "description": "NuQ prefetch worker health port.",
+          "required": false
+        },
+        "NUQ_RECONCILER_WORKER_PORT": {
+          "defaultValue": "3012",
+          "description": "NuQ reconciler health port.",
+          "required": false
+        },
+        "IS_KUBERNETES": {
+          "defaultValue": "true",
+          "description": "Use container (cgroup v2) CPU/RAM figures for job back-pressure instead of host-wide numbers.",
+          "required": false
+        },
+        "ENV": {
+          "defaultValue": "local",
+          "description": "Self-hosted mode (same value as the upstream docker-compose).",
+          "required": false
+        },
+        "LOGGING_LEVEL": {
+          "defaultValue": "INFO",
+          "description": "Log level.",
+          "required": false
+        },
+        "USE_DB_AUTHENTICATION": {
+          "defaultValue": "false",
+          "description": "Supabase auth is not available for self-hosting; the firecrawl gateway enforces the API key instead.",
+          "required": false
+        },
+        "REDIS_URL": {
+          "defaultValue": "${{Redis.REDIS_URL}}",
+          "description": "Redis for BullMQ queues and crawl state.",
+          "required": false
+        },
+        "REDIS_RATE_LIMIT_URL": {
+          "defaultValue": "${{Redis.REDIS_URL}}",
+          "description": "Redis for rate limiting.",
+          "required": false
+        },
+        "NUQ_DATABASE_URL": {
+          "defaultValue": "postgresql://postgres:${{nuq-postgres.POSTGRES_PASSWORD}}@${{nuq-postgres.RAILWAY_PRIVATE_DOMAIN}}:5432/postgres",
+          "description": "NuQ job queue database (nuq-postgres, private network).",
+          "required": false
+        },
+        "NUQ_DATABASE_URL_LISTEN": {
+          "defaultValue": "${{NUQ_DATABASE_URL}}",
+          "description": "Direct connection used for LISTEN/NOTIFY (same database).",
+          "required": false
+        },
+        "NUQ_RABBITMQ_URL": {
+          "defaultValue": "amqp://firecrawl:${{RabbitMQ.RABBITMQ_DEFAULT_PASS}}@${{RabbitMQ.RAILWAY_PRIVATE_DOMAIN}}:5672",
+          "description": "RabbitMQ used by NuQ to wake workers when jobs arrive.",
+          "required": false
+        },
+        "PLAYWRIGHT_MICROSERVICE_URL": {
+          "defaultValue": "http://${{playwright-service.RAILWAY_PRIVATE_DOMAIN}}:3000/scrape",
+          "description": "Browser rendering service (private network).",
+          "required": false
+        },
+        "BULL_AUTH_KEY": {
+          "defaultValue": "${{firecrawl-api.BULL_AUTH_KEY}}",
+          "description": "Shared with firecrawl-api (BULL_AUTH_KEY).",
+          "required": false
+        },
+        "NUM_WORKERS_PER_QUEUE": {
+          "defaultValue": "${{firecrawl-api.NUM_WORKERS_PER_QUEUE}}",
+          "description": "Shared with firecrawl-api (NUM_WORKERS_PER_QUEUE).",
+          "required": false
+        },
+        "CRAWL_CONCURRENT_REQUESTS": {
+          "defaultValue": "${{firecrawl-api.CRAWL_CONCURRENT_REQUESTS}}",
+          "description": "Shared with firecrawl-api (CRAWL_CONCURRENT_REQUESTS).",
+          "required": false
+        },
+        "MAX_CONCURRENT_JOBS": {
+          "defaultValue": "${{firecrawl-api.MAX_CONCURRENT_JOBS}}",
+          "description": "Shared with firecrawl-api (MAX_CONCURRENT_JOBS).",
+          "required": false
+        },
+        "BROWSER_POOL_SIZE": {
+          "defaultValue": "${{firecrawl-api.BROWSER_POOL_SIZE}}",
+          "description": "Shared with firecrawl-api (BROWSER_POOL_SIZE).",
+          "required": false
+        },
+        "OPENAI_API_KEY": {
+          "defaultValue": "${{firecrawl-api.OPENAI_API_KEY}}",
+          "description": "Shared with firecrawl-api (OPENAI_API_KEY).",
+          "required": false
+        },
+        "OPENAI_BASE_URL": {
+          "defaultValue": "${{firecrawl-api.OPENAI_BASE_URL}}",
+          "description": "Shared with firecrawl-api (OPENAI_BASE_URL).",
+          "required": false
+        },
+        "MODEL_NAME": {
+          "defaultValue": "${{firecrawl-api.MODEL_NAME}}",
+          "description": "Shared with firecrawl-api (MODEL_NAME).",
+          "required": false
+        },
+        "MODEL_EMBEDDING_NAME": {
+          "defaultValue": "${{firecrawl-api.MODEL_EMBEDDING_NAME}}",
+          "description": "Shared with firecrawl-api (MODEL_EMBEDDING_NAME).",
+          "required": false
+        },
+        "OLLAMA_BASE_URL": {
+          "defaultValue": "${{firecrawl-api.OLLAMA_BASE_URL}}",
+          "description": "Shared with firecrawl-api (OLLAMA_BASE_URL).",
+          "required": false
+        },
+        "PROXY_SERVER": {
+          "defaultValue": "${{firecrawl-api.PROXY_SERVER}}",
+          "description": "Shared with firecrawl-api (PROXY_SERVER).",
+          "required": false
+        },
+        "PROXY_USERNAME": {
+          "defaultValue": "${{firecrawl-api.PROXY_USERNAME}}",
+          "description": "Shared with firecrawl-api (PROXY_USERNAME).",
+          "required": false
+        },
+        "PROXY_PASSWORD": {
+          "defaultValue": "${{firecrawl-api.PROXY_PASSWORD}}",
+          "description": "Shared with firecrawl-api (PROXY_PASSWORD).",
+          "required": false
+        },
+        "SEARXNG_ENDPOINT": {
+          "defaultValue": "${{firecrawl-api.SEARXNG_ENDPOINT}}",
+          "description": "Shared with firecrawl-api (SEARXNG_ENDPOINT).",
+          "required": false
+        },
+        "RAILWAY_DEPLOYMENT_DRAINING_SECONDS": {
+          "defaultValue": "60",
+          "description": "Let running jobs finish during redeploys.",
+          "required": false
+        }
+      }
+    },
+    "firecrawl-nuq-worker": {
+      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/svg/firecrawl.svg",
+      "source": {
+        "repo": "baranberkay96/firecrawl-railway",
+        "rootDirectory": "/services/firecrawl-workers"
+      },
+      "startCommand": null,
+      "preDeployCommand": null,
+      "healthcheckPath": "/health",
+      "healthcheckTimeout": 300,
+      "restartPolicyType": "ON_FAILURE",
+      "restartPolicyMaxRetries": 10,
+      "numReplicas": 1,
+      "cronSchedule": null,
+      "publicDomain": false,
+      "targetPort": 3006,
+      "tcpProxy": null,
+      "volume": null,
+      "variables": {
+        "FIRECRAWL_WORKER_ROLE": {
+          "defaultValue": "nuq-worker",
+          "description": "Runs NUQ_WORKER_COUNT scrape-executor processes (services/firecrawl-workers/railway-workers.sh).",
+          "required": false
+        },
+        "NUQ_WORKER_COUNT": {
+          "defaultValue": "5",
+          "description": "Scrape executor processes in this container (upstream harness default 5). Each handles one job at a time.",
+          "required": false
+        },
+        "NUQ_WORKER_START_PORT": {
+          "defaultValue": "3006",
+          "description": "First health port; process i listens on start+i.",
+          "required": false
+        },
+        "PORT": {
+          "defaultValue": "3006",
+          "description": "Health port of the first executor (Railway healthcheck).",
+          "required": false
+        },
+        "ENV": {
+          "defaultValue": "local",
+          "description": "Self-hosted mode (same value as the upstream docker-compose).",
+          "required": false
+        },
+        "LOGGING_LEVEL": {
+          "defaultValue": "INFO",
+          "description": "Log level.",
+          "required": false
+        },
+        "USE_DB_AUTHENTICATION": {
+          "defaultValue": "false",
+          "description": "Supabase auth is not available for self-hosting; the firecrawl gateway enforces the API key instead.",
+          "required": false
+        },
+        "REDIS_URL": {
+          "defaultValue": "${{Redis.REDIS_URL}}",
+          "description": "Redis for BullMQ queues and crawl state.",
+          "required": false
+        },
+        "REDIS_RATE_LIMIT_URL": {
+          "defaultValue": "${{Redis.REDIS_URL}}",
+          "description": "Redis for rate limiting.",
+          "required": false
+        },
+        "NUQ_DATABASE_URL": {
+          "defaultValue": "postgresql://postgres:${{nuq-postgres.POSTGRES_PASSWORD}}@${{nuq-postgres.RAILWAY_PRIVATE_DOMAIN}}:5432/postgres",
+          "description": "NuQ job queue database (nuq-postgres, private network).",
+          "required": false
+        },
+        "NUQ_DATABASE_URL_LISTEN": {
+          "defaultValue": "${{NUQ_DATABASE_URL}}",
+          "description": "Direct connection used for LISTEN/NOTIFY (same database).",
+          "required": false
+        },
+        "NUQ_RABBITMQ_URL": {
+          "defaultValue": "amqp://firecrawl:${{RabbitMQ.RABBITMQ_DEFAULT_PASS}}@${{RabbitMQ.RAILWAY_PRIVATE_DOMAIN}}:5672",
+          "description": "RabbitMQ used by NuQ to wake workers when jobs arrive.",
+          "required": false
+        },
+        "PLAYWRIGHT_MICROSERVICE_URL": {
+          "defaultValue": "http://${{playwright-service.RAILWAY_PRIVATE_DOMAIN}}:3000/scrape",
+          "description": "Browser rendering service (private network).",
+          "required": false
+        },
+        "BULL_AUTH_KEY": {
+          "defaultValue": "${{firecrawl-api.BULL_AUTH_KEY}}",
+          "description": "Shared with firecrawl-api (BULL_AUTH_KEY).",
+          "required": false
+        },
+        "NUM_WORKERS_PER_QUEUE": {
+          "defaultValue": "${{firecrawl-api.NUM_WORKERS_PER_QUEUE}}",
+          "description": "Shared with firecrawl-api (NUM_WORKERS_PER_QUEUE).",
+          "required": false
+        },
+        "CRAWL_CONCURRENT_REQUESTS": {
+          "defaultValue": "${{firecrawl-api.CRAWL_CONCURRENT_REQUESTS}}",
+          "description": "Shared with firecrawl-api (CRAWL_CONCURRENT_REQUESTS).",
+          "required": false
+        },
+        "MAX_CONCURRENT_JOBS": {
+          "defaultValue": "${{firecrawl-api.MAX_CONCURRENT_JOBS}}",
+          "description": "Shared with firecrawl-api (MAX_CONCURRENT_JOBS).",
+          "required": false
+        },
+        "BROWSER_POOL_SIZE": {
+          "defaultValue": "${{firecrawl-api.BROWSER_POOL_SIZE}}",
+          "description": "Shared with firecrawl-api (BROWSER_POOL_SIZE).",
+          "required": false
+        },
+        "OPENAI_API_KEY": {
+          "defaultValue": "${{firecrawl-api.OPENAI_API_KEY}}",
+          "description": "Shared with firecrawl-api (OPENAI_API_KEY).",
+          "required": false
+        },
+        "OPENAI_BASE_URL": {
+          "defaultValue": "${{firecrawl-api.OPENAI_BASE_URL}}",
+          "description": "Shared with firecrawl-api (OPENAI_BASE_URL).",
+          "required": false
+        },
+        "MODEL_NAME": {
+          "defaultValue": "${{firecrawl-api.MODEL_NAME}}",
+          "description": "Shared with firecrawl-api (MODEL_NAME).",
+          "required": false
+        },
+        "MODEL_EMBEDDING_NAME": {
+          "defaultValue": "${{firecrawl-api.MODEL_EMBEDDING_NAME}}",
+          "description": "Shared with firecrawl-api (MODEL_EMBEDDING_NAME).",
+          "required": false
+        },
+        "OLLAMA_BASE_URL": {
+          "defaultValue": "${{firecrawl-api.OLLAMA_BASE_URL}}",
+          "description": "Shared with firecrawl-api (OLLAMA_BASE_URL).",
+          "required": false
+        },
+        "PROXY_SERVER": {
+          "defaultValue": "${{firecrawl-api.PROXY_SERVER}}",
+          "description": "Shared with firecrawl-api (PROXY_SERVER).",
+          "required": false
+        },
+        "PROXY_USERNAME": {
+          "defaultValue": "${{firecrawl-api.PROXY_USERNAME}}",
+          "description": "Shared with firecrawl-api (PROXY_USERNAME).",
+          "required": false
+        },
+        "PROXY_PASSWORD": {
+          "defaultValue": "${{firecrawl-api.PROXY_PASSWORD}}",
+          "description": "Shared with firecrawl-api (PROXY_PASSWORD).",
+          "required": false
+        },
+        "SEARXNG_ENDPOINT": {
+          "defaultValue": "${{firecrawl-api.SEARXNG_ENDPOINT}}",
+          "description": "Shared with firecrawl-api (SEARXNG_ENDPOINT).",
+          "required": false
+        },
+        "RAILWAY_DEPLOYMENT_DRAINING_SECONDS": {
+          "defaultValue": "60",
+          "description": "Let running scrapes finish during redeploys.",
+          "required": false
+        }
+      }
+    },
+    "playwright-service": {
+      "icon": "https://playwright.dev/img/playwright-logo.svg",
+      "source": {
+        "image": "ghcr.io/firecrawl/playwright-service:latest@sha256:717699bf8a61d94451926c810d19ca1d36278192907e307bf5229a558b08fcc6"
+      },
+      "startCommand": null,
+      "preDeployCommand": null,
+      "healthcheckPath": "/health",
+      "healthcheckTimeout": 300,
+      "restartPolicyType": "ON_FAILURE",
+      "restartPolicyMaxRetries": 10,
+      "numReplicas": 1,
+      "cronSchedule": null,
+      "publicDomain": false,
+      "targetPort": 3000,
+      "tcpProxy": null,
+      "volume": null,
+      "variables": {
+        "PORT": {
+          "defaultValue": "3000",
+          "description": "HTTP port of the Playwright scrape service (private).",
+          "required": false
+        },
+        "MAX_CONCURRENT_PAGES": {
+          "defaultValue": "${{firecrawl-api.CRAWL_CONCURRENT_REQUESTS}}",
+          "description": "Concurrent browser pages; follows CRAWL_CONCURRENT_REQUESTS like upstream.",
+          "required": false
+        },
+        "BLOCK_MEDIA": {
+          "defaultValue": "false",
+          "description": "Set true to block images/video downloads (less bandwidth, faster pages).",
+          "required": false
+        },
+        "ALLOW_LOCAL_WEBHOOKS": {
+          "defaultValue": "false",
+          "description": "Keep false so pages cannot be pointed at private addresses.",
+          "required": false
+        },
+        "PROXY_SERVER": {
+          "defaultValue": "${{firecrawl-api.PROXY_SERVER}}",
+          "description": "Optional outbound proxy (shared with firecrawl-api).",
+          "required": false
+        },
+        "PROXY_USERNAME": {
+          "defaultValue": "${{firecrawl-api.PROXY_USERNAME}}",
+          "description": "Optional proxy username.",
+          "required": false
+        },
+        "PROXY_PASSWORD": {
+          "defaultValue": "${{firecrawl-api.PROXY_PASSWORD}}",
+          "description": "Optional proxy password.",
+          "required": false
+        }
+      }
+    },
+    "nuq-postgres": {
+      "icon": "https://devicons.railway.app/i/postgresql.svg",
+      "source": {
+        "image": "ghcr.io/firecrawl/nuq-postgres:latest@sha256:9b638af78d99873bc0ba2b57c9cbcd01df6ce96efeaa72d36cfbe0f76521e8fc"
+      },
+      "startCommand": "docker-entrypoint.sh postgres -c max_wal_size=1GB -c min_wal_size=128MB -c wal_buffers=16MB",
+      "preDeployCommand": null,
+      "healthcheckPath": null,
+      "healthcheckTimeout": null,
+      "restartPolicyType": "ON_FAILURE",
+      "restartPolicyMaxRetries": 10,
+      "numReplicas": 1,
+      "cronSchedule": null,
+      "publicDomain": false,
+      "targetPort": null,
+      "tcpProxy": null,
+      "volume": {
+        "mountPath": "/var/lib/postgresql/data"
+      },
+      "variables": {
+        "POSTGRES_USER": {
+          "defaultValue": "postgres",
+          "description": "Superuser created on first boot (pg_cron jobs run in the postgres database).",
+          "required": false
+        },
+        "POSTGRES_PASSWORD": {
+          "defaultValue": "${{secret(32, \"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789\")}}",
+          "description": "Database password, generated.",
+          "required": false
+        },
+        "POSTGRES_DB": {
+          "defaultValue": "postgres",
+          "description": "Must stay 'postgres': the image configures cron.database_name = 'postgres' and installs the NuQ schema there.",
+          "required": false
+        },
+        "PGDATA": {
+          "defaultValue": "/var/lib/postgresql/data/pgdata",
+          "description": "Data directory inside the volume (avoids the volume's lost+found).",
+          "required": false
+        },
+        "RAILWAY_DEPLOYMENT_DRAINING_SECONDS": {
+          "defaultValue": "60",
+          "description": "Allow Postgres to shut down cleanly.",
+          "required": false
+        }
+      }
+    },
+    "Redis": {
+      "icon": "https://cdn.sanity.io/images/sy1jschh/production/0ce0bfdcfbdbf69662b1116671f97c2dd788b655-157x157.svg",
+      "source": {
+        "image": "redis:8.2"
+      },
+      "startCommand": "/bin/sh -c \"rm -rf $RAILWAY_VOLUME_MOUNT_PATH/lost+found/ && exec docker-entrypoint.sh redis-server --requirepass $REDIS_PASSWORD --save 60 1 --dir $RAILWAY_VOLUME_MOUNT_PATH\"",
+      "preDeployCommand": null,
+      "healthcheckPath": null,
+      "healthcheckTimeout": null,
+      "restartPolicyType": "ON_FAILURE",
+      "restartPolicyMaxRetries": 10,
+      "numReplicas": 1,
+      "cronSchedule": null,
+      "publicDomain": false,
+      "targetPort": null,
+      "tcpProxy": null,
+      "volume": {
+        "mountPath": "/data"
+      },
+      "variables": {
+        "REDISHOST": {
+          "defaultValue": "${{RAILWAY_PRIVATE_DOMAIN}}",
+          "description": "Private network hostname of the Redis service, only resolvable from services in the same environment",
+          "required": false
+        },
+        "REDISPORT": {
+          "defaultValue": "6379",
+          "description": "Port that Redis listens on",
+          "required": false
+        },
+        "REDISUSER": {
+          "defaultValue": "default",
+          "description": "Username for authenticating with Redis",
+          "required": false
+        },
+        "REDIS_URL": {
+          "defaultValue": "redis://${{ REDISUSER }}:${{ REDIS_PASSWORD }}@${{ REDISHOST }}:${{ REDISPORT }}",
+          "description": "Connection string for connecting to Redis using the private network",
+          "required": false
+        },
+        "REDISPASSWORD": {
+          "defaultValue": "${{REDIS_PASSWORD}}",
+          "description": "Alias of REDIS_PASSWORD for clients that expect the unseparated name",
+          "required": false
+        },
+        "REDIS_PASSWORD": {
+          "defaultValue": "${{ secret(32, \"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ\") }}",
+          "description": "Randomly generated password for authenticating with Redis",
+          "required": false
+        }
+      }
+    },
+    "RabbitMQ": {
+      "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/rabbitmq.svg",
+      "source": {
+        "image": "rabbitmq:4.3.6-alpine"
+      },
+      "startCommand": null,
+      "preDeployCommand": null,
+      "healthcheckPath": null,
+      "healthcheckTimeout": null,
+      "restartPolicyType": "ON_FAILURE",
+      "restartPolicyMaxRetries": 10,
+      "numReplicas": 1,
+      "cronSchedule": null,
+      "publicDomain": false,
+      "targetPort": null,
+      "tcpProxy": null,
+      "volume": null,
+      "variables": {
+        "RABBITMQ_DEFAULT_USER": {
+          "defaultValue": "firecrawl",
+          "description": "RabbitMQ user for NuQ.",
+          "required": false
+        },
+        "RABBITMQ_DEFAULT_PASS": {
+          "defaultValue": "${{secret(32, \"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789\")}}",
+          "description": "RabbitMQ password, generated.",
+          "required": false
+        }
+      }
+    }
+  },
+  "buckets": []
+}
