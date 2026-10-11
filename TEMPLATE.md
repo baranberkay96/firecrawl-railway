@@ -3,7 +3,7 @@
 ## Listing
 
 - **Name:** Firecrawl v2 Web Data API for AI (LISTINGS.md name with the pinned major version inserted after the software name; Firecrawl tags releases `v2.x`)
-- **Description (79 chars):** Turn websites into clean markdown and JSON for LLMs. Self-hosted, with workers. (unchanged)
+- **Description (79 chars):** Turn websites into clean markdown and JSON for LLMs. Self-hosted workers. (unchanged)
 - **Category:** AI/ML
 - **Tags:** firecrawl, web-scraping, crawler, markdown, llm, rag, playwright
 

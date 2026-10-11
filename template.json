@@ -1,6 +1,6 @@
 {
   "name": "Firecrawl v2 Web Data API for AI",
-  "description": "Turn websites into clean markdown and JSON for LLMs. Self-hosted, with workers.",
+  "description": "Turn websites into clean markdown and JSON for LLMs. Self-hosted workers.",
   "category": "AI/ML",
   "tags": [
     "firecrawl",
