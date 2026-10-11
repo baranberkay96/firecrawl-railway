@@ -1,5 +1,7 @@
 # Deploy and Host Firecrawl with Railway
 
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/firecrawl-v2-web-data-api-for-ai)
+
 Firecrawl is an open-source API that turns websites into clean markdown, HTML, screenshots or structured JSON for LLM applications. This community template deploys the self-hosted Firecrawl stack on Railway with separate workers, a headless Chromium renderer, its queue databases and an API-key gateway in front.
 
 ## About Hosting Firecrawl
